@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon AI Chat</title>
+
+<style>
+body {margin:0;font-family:Arial;background:#020617;color:#00f0ff}
+
+/* SIDEBAR */
+#sidebar{width:250px;height:100vh;float:left;border-right:1px solid #00f0ff33}
+.tab{padding:10px;cursor:pointer}
+.tab:hover{background:#00f0ff22}
+
+/* MAIN */
+#main{margin-left:250px;display:flex;flex-direction:column;height:100vh}
+
+/* HEADER */
+header{padding:10px;box-shadow:0 0 10px #00f0ff;display:flex;justify-content:space-between}
+
+/* CHAT */
+#chat{flex:1;overflow:auto;padding:10px}
+.msg{margin:5px;padding:10px;border-radius:10px;max-width:70%;box-shadow:0 0 10px #00f0ff55}
+.user{background:#003b3b;margin-left:auto}
+.bot{background:#001f1f}
+
+/* INPUT */
+#inputArea{display:flex;padding:10px}
+input{flex:1;padding:10px;background:#001f1f;color:#00f0ff;border:none}
+button,select{margin-left:5px;background:#001f1f;color:#00f0ff;border:none;padding:8px}
+
+/* EMOTION */
+#emotionBar{height:8px;background:#001f1f}
+#emotionFill{height:100%;width:50%;background:#00f0ff;box-shadow:0 0 10px #00f0ff}
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+  <div class="tab" onclick="gantiTab(0)">Chat 1</div>
+  <div class="tab" onclick="gantiTab(1)">Chat 2</div>
+  <div class="tab" onclick="gantiTab(2)">Chat 3</div>
+  <button onclick="tambahTab()">+ Chat</button>
+</div>
+
+<div id="main">
+<header>
+  <div>🤖 Neon AI</div>
+  <select id="botSelect">
+    <option value="1">B1</option>
+    <option value="2">B2</option>
+    <option value="3">B3</option>
+  </select>
+</header>
+
+<div id="emotionBar"><div id="emotionFill"></div></div>
+<div id="chat"></div>
+
+<div id="inputArea">
+  <input id="text" placeholder="Ketik pesan...">
+  <button onclick="kirim()">Kirim</button>
+</div>
+</div>
+
+<script>
+let chats=[[],[],[]];
+let currentTab=0;
+
+function renderChat(){
+  let chat=document.getElementById("chat");
+  chat.innerHTML="";
+  chats[currentTab].forEach(m=>{
+    let d=document.createElement("div");
+    d.className="msg "+m.type;
+    d.innerText=m.text;
+    chat.appendChild(d);
+  });
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function gantiTab(i){currentTab=i;renderChat();}
+function tambahTab(){chats.push([]);alert("Chat baru");}
+
+function setEmotion(x){
+  document.getElementById("emotionFill").style.width=x+"%";
+}
+
+function getPrompt(t){
+  let b=document.getElementById("botSelect").value;
+  let r={
+    1:"AI ramah 😊",
+    2:"AI humoris 😆🔥",
+    3:"AI dingin 😐⚡"
+  };
+  return r[b]+". Balas dengan emosi + emoji: "+t;
+}
+
+async function kirim(){
+  let input=document.getElementById("text");
+  let text=input.value;
+  if(!text)return;
+
+  chats[currentTab].push({type:"user",text});
+  renderChat();
+  input.value="";
+
+  chats[currentTab].push({type:"bot",text:"Mengetik..."});
+  renderChat();
+
+  try{
+    let res=await fetch("/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text:getPrompt(text)})
+    });
+
+    let data=await res.json();
+
+    chats[currentTab].pop();
+    chats[currentTab].push({type:"bot",text:data.reply||"⚠️ Error"});
+    renderChat();
+
+    setEmotion(Math.random()*100);
+
+  }catch{
+    chats[currentTab].push({type:"bot",text:"⚠️ Koneksi gagal"});
+    renderChat();
+  }
+}
+</script>
+
+</body>
+</html>
